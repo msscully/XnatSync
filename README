@@ -1,0 +1,31 @@
+XnatSynchronization scripts
+===========================
+
+Used to synchronize the imaging data on the RPACS xnat instance to
+the predict xnat instance, then sync the predict xnat imaging data
+to the filesystem under /paulsen/MRx/.
+
+To use, correctly populate the configuration variables in syncConfig.cfg
+similar to the example in sync.Config.example. 
+
+These scripts have a number of dependencies.  To use them, first install
+the required modules using:
+
+pip install --user keyring
+pip install --user httplib2
+pip install --user pyxnat
+pip install --user pydicom
+
+If a password is not stored in the keyring of the machine you are
+running the script on you will be prompted for the password.  After
+a password has been entered it will be stored in the keyring.  To change
+the stored password run:
+
+$ python RunSynchronization.py --setPassword
+
+You will be prompted for your password. 
+
+To automate things simply create a cron job to execute this script.  An
+example that is executed nightly at 1:00am would look like:
+crontab:
+1 1 * * * python $PATHTOSCRIPT/RunSynchronization.py
