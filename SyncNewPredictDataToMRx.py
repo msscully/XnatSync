@@ -260,6 +260,7 @@ class SyncNewPredictDataToMRx():
                 os.makedirs(newDir)
 
             seriesNumbers = tempExperiment.scans().get()
+            field_strength = 0
 
             for seriesNumber in seriesNumbers:
                 scanType = self.__getScanTypeFromXnat(projectLabel,
@@ -275,6 +276,12 @@ class SyncNewPredictDataToMRx():
                     self.logger.info("scanType, " + scanType + ", not in the whitelist, skipping scanID="+scanID+", seriesNumber="+seriesNumber+".")
                     continue
 
+                scan = tempExperiment.scans(seriesNumber).get()
+                try:
+                    field_strength = tempExperiment.scan(scan).attrs.get('xnat:mrScanData/fieldStrength')
+                except IndexError:
+                    pass
+
                 # Check if this scan is usable.
                 usable = self.__isScanUsableInXnat(projectLabel,scanID,
                                                    seriesNumber,subjectLabel)
@@ -286,6 +293,7 @@ class SyncNewPredictDataToMRx():
                 else:
                   self.logger.debug(newDir+'/*_'+seriesNumber+'.nii.gz')
                   convertedFilesList = glob.glob(newDir+'/*_'+seriesNumber+'.nii.gz')
+
                 self.logger.debug("List of coverted files with this series number: ".format(convertedFilesList))
                 if len(convertedFilesList) > 0:
                   self.logger.info("{0},{1} has already been converted.".format(scanID,seriesNumber))
@@ -301,12 +309,23 @@ class SyncNewPredictDataToMRx():
                                                                                                  seriesNumber,
                                                                                                  extension))
                           os.rename(imageFile,unusableImageFile)
+                  else:
+                      for imageFile in convertedFilesList:
+                          if re.match('unusable_*',imageFile):
+                              self.logger.info("Scan {0} is now usable, removing 'unusable_'.".format(imageFile))
+                              extension = re.match('[-\w]+\.(.+)$',os.path.basename(imageFile)).group(1)
+                              usableImageFile = os.path.join(newDir,
+                                                             '{0]_{1}_{2}_{3}.{4}'.format(subjectLabel,
+                                                                                          scanID,
+                                                                                          scanType,
+                                                                                          seriesNumber,
+                                                                                          extension))
                   continue
 
-                usablePrepend = ''
+                unusablePrepend = ''
                 if not usable:
                     self.logger.info("{0},{1} has been labeled unusable in xnat.".format(scanID,seriesNumber))
-                    usablePrepend = 'unusable_'
+                    unusablePrepend = 'unusable_'
 
                 # download scan from xnat
                 self.logger.debug("Downloading {0},{1} from xnat.".format(scanID,
@@ -357,8 +376,8 @@ class SyncNewPredictDataToMRx():
 
                     scanTypePD = "PD" + scanTypeSuffix
                     scanTypeT2 = "T2" + scanTypeSuffix
-                    newPDFileName=usablePrepend+subjectLabel+"_"+scanID+"_"+scanTypePD+"_"+seriesNumber+".nii.gz"
-                    newT2FileName=usablePrepend+subjectLabel+"_"+scanID+"_"+scanTypeT2+"_"+seriesNumber+".nii.gz"
+                    newPDFileName=unusablePrepend+subjectLabel+"_"+scanID+"_"+scanTypePD+"_"+seriesNumber+".nii.gz"
+                    newT2FileName=unusablePrepend+subjectLabel+"_"+scanID+"_"+scanTypeT2+"_"+seriesNumber+".nii.gz"
 
                     # Convert PD dicom to nifti
                     try:
@@ -384,7 +403,7 @@ class SyncNewPredictDataToMRx():
                     shutil.rmtree(tmpPDDir)
                     shutil.rmtree(tmpT2Dir)
                 elif re.search('DWI',scanType):
-                    newFileName=usablePrepend+subjectLabel+"_"+scanID+"_"+scanType+"_"+seriesNumber+".nrrd"
+                    newFileName=unusablePrepend+subjectLabel+"_"+scanID+"_"+scanType+"_"+seriesNumber+".nrrd"
                     newFileNameWithPath=os.path.join(newDir,newFileName)
 
                     # Use DicomToNrrdConverter to convert the DWI to nifti
@@ -398,14 +417,14 @@ class SyncNewPredictDataToMRx():
                         self.logger.error(newFileNameWithPath+" doesn't exist! Conversion failed.")
                         continue
                     newScanType="DWI-"+numberVolumes
-                    correctedFileName=usablePrepend+subjectLabel+"_"+scanID+"_"+newScanType
+                    correctedFileName=unusablePrepend+subjectLabel+"_"+scanID+"_"+newScanType
                     correctedFileName+="_"+seriesNumber+".nrrd"
                     correctedFileNameWithPath=os.path.join(newDir,correctedFileName)
                     os.rename(newFileNameWithPath,correctedFileNameWithPath)
                     if newScanType != scanType:
                         self.__updateDWIScanTypeInXnat(projectLabel,scanID,seriesNumber,newScanType)
                 else:
-                    newFileName=usablePrepend+subjectLabel+"_"+scanID+"_"+scanType+"_"+seriesNumber+".nii.gz"
+                    newFileName=unusablePrepend+subjectLabel+"_"+scanID+"_"+scanType+"_"+seriesNumber+".nii.gz"
                     newFileNameWithDir = os.path.join(newDir,newFileName)
 
                     # Use ConvertBetweenFileFormats to convert the Dicom to nifti
@@ -419,7 +438,7 @@ class SyncNewPredictDataToMRx():
                         continue
 
                 if re.match("T1",scanType):
-                    newMGZFileName=usablePrepend+subjectLabel+"_"+scanID+"_"+scanType+"_"+seriesNumber+".mgz"
+                    newMGZFileName=unusablePrepend+subjectLabel+"_"+scanID+"_"+scanType+"_"+seriesNumber+".mgz"
                     newMGZDir=newDir
                     tmpFiles=[i for i in tempDir if not re.search('xml',i) and
                             not re.search('info',i)]
@@ -447,6 +466,12 @@ class SyncNewPredictDataToMRx():
             if stat.S_IMODE(os.stat(newDir).st_mode) != permissions:
                 self.logger.info("Updating permissions on {0}".format(newDir))
                 os.chmod(newDir,permissions)
+
+            # Update session level field strength in xnat if it's missing
+            current_field_strength = tempExperiment.attrs.get('xnat:mrSessionData/fieldStrength')
+            if current_field_strength == '':
+                tempExperiment.attrs.set('xnat:mrSessionData/fieldStrength',field_strength)
+
         return
 
 if __name__ == "__main__":
