@@ -1,0 +1,106 @@
+[Logging]
+# These are the settings used for logging messages generated
+# by the sync program.
+# The path/name of the file to use as the log file.
+LogFilePath=/path/to/RunSync.log
+# The level above with log messages are sent to the log file.
+# Possible values are 'debug','info','warn','error','critical'.
+# Default is 'info'.
+LogLevel=info
+# The comma separated list of email addresses to send log messages
+# of 'warn' level or higher.
+WarnEmailList=someone@uiowa.edu
+# The comma separated list of email addresses to send log messages
+# of 'error' level or higher.
+ErrorEmailList=
+# The comma separated list of email addresses to send log messages
+# of 'critical' level or higher.
+CriticalEmailList=
+# Comma separated list of email addresses to send the completion
+# summary.
+SummaryEmailList=someone@uiowa.edu
+# Subject to use in the summary email.  The date-time will be appended.
+SummaryEmailSubject=RunSynchronization Summary
+# Subject for emails at warn level
+WarnSubject=Warning - RunSynchronization
+# Subject for emails at error level
+ErrorSubject=Error - RunSynchronization
+# Subject for emails at warn level
+CriticalSubject=Critical - RunSynchronization
+# SMTP host for sending emails
+SMTPHost=somemachine.uiowa.edu
+# Email address the synchronization message will come from
+# Recommended format is  run.synchronization@machine.edu
+FromAddress=run.synchronization@somemachine.uiowa.edu
+
+[Programs]
+# The programs section is for specifying the path/name of the
+# commands needed to convert image files.  The paths need to
+# be correct for the machine the sync program is running on.
+# Path to the DicomToNrrdConverter progam.  This is part of
+# Slcier3, Slicer4, and a standalone version can be built from
+# the BRAINS3 nitrc repository.
+DicomToNrrdConverterPath=/path/to/DicomToNrrdConverter
+# Path to the mri_convert program.  This is part of FreeSurfer
+# and is used to convert T1 images to .mgz format.
+MriConvertPath=/path/to/mri_convert
+# Path to the ConvertBetweenFileFormats program.  This program
+# is part of BRAINS2 and BRAINS3.
+ConvertBetweenFileFormatsPath=/path/to/ConvertBetweenFileFormats
+
+[RpacsToPredict]
+# This section specifies which projects in rpacs xnat get
+# synced to which projects in predict xnat.
+# ex:
+#     RpacsProjects=JP_FMRI_024,PREDICT_HD
+#     PredictProjects=FMRI_HD_024,PHD_024
+# In this case JP_FMRI_024 will be copied to FMRI_HD_024 and
+# PREDICT_HD will be copied to PHD_024.
+RpacsProjects=JP_FMRI_HD,PREDICT_HD
+PredictProjects=FMRI_HD_024,PHD_024
+
+[XnatPredict]
+# Settings for predict xnat instance
+# Username for the predict xnat instance.  This will be used
+# to fetch the password from the keyring on this machine.
+USERNAME=someone
+# The url of the predict xnat instance.
+XNATURL=https://www.predict-hd.net/xnat
+# The url to use in convjunction with DicomRemap
+DICOM_SCP=dicom://xnat.predict-hd.net:8104/XNAT
+# The directory to use as a cache for pyxnat when connecting to
+# the predict xnat instance.
+CACHEDIR=/tmp/PredictXnatCache
+
+[XnatRpacs]
+# Settings for rpacs xnat instance
+# Username for the rpacs xnat instance. This will be used
+# to fetch the password from the keyring on this machine.
+USERNAME=someone
+# The url of the predict xnat instance.
+XNATURL=https://rpacs.icts.uiowa.edu/xnat
+# The directory to use as a cache for pyxnat when connecting to
+# the rpacs xnat instance.
+CACHEDIR=/tmp/RpacsXnatCache
+
+[DicomRemap]
+# The settings for the DicomRemap command, which is used to upload
+# scans to the predict xnat instance.
+# The location of the DicomRemap command.
+REMAPCOMMAND=/path/to/DicomRemap
+# The location of the base anon script, used as a starting point
+# to create a anonymization script used by DicomRemap to anonymize
+# dicom files.
+BASEANON=/paulsen/etc/new_anon.das
+
+[Misc]
+# The base location to write nifti files to on the file system.  Currently
+# it's /paulsen/MRx/
+DestinationBase=/paulsen/MRx/
+# Path to the file containing the whitelist of scan types to be converted.
+WhiteListPath=/paulsen/etc/scanTypeWhiteList.txt
+# The number of days old a scan can be and still be processed by this program.
+NewScanInterval=14
+# SSHUsername is the username to use when opening the ssh tunnel to xnat.predict-hd.net
+# An ssh key for this user to passwordlessly login to xnat.predict-hd.net is required.
+SSHUsername=someone
